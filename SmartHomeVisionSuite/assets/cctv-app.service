@@ -1,0 +1,15 @@
+[Unit]
+Description=Python Application with Local Virtual Environment
+After=network.target
+
+[Service]
+Type=simple
+User=danielckv
+WorkingDirectory=/home/danielckv/localSetup
+Environment="PATH=/home/danielckv/localSetup/venv/bin:/usr/bin:/usr/bin/ffmpeg:/:$PATH"
+ExecStart=/home/danielckv/localSetup/venv/bin/python bootstrap.py
+
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

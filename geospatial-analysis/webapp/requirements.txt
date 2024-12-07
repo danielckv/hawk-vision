@@ -1,0 +1,14 @@
+pycocotools==2.0.7
+matplotlib
+geopandas
+rasterio==1.3.9
+tqdm
+xyzservices
+pyproj
+gradio==4.36.1
+segment-anything
+super-gradients
+pydantic
+scikit-image
+segment-geospatial==0.10.6
+mesop

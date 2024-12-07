@@ -1,0 +1,12 @@
+[Unit]
+Description=RIUS Streamer
+
+[Service]
+User=rius
+WorkingDirectory=/home/rius/LocalSetup
+ExecStart=/usr/bin/python3.11 /home/rius/LocalSetup/videoStreamer/main.py
+Restart=on-failure
+RestartSec=20
+
+[Install]
+WantedBy=multi-user.target

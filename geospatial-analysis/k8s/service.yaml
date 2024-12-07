@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: data-services-riuslab-ui-app
+spec:
+  selector:
+    app: data-services
+  ports:
+    - name: master
+      protocol: TCP
+      port: 7501
+      targetPort: 7501
+    - name: proxy-gw
+      protocol: TCP
+      port: 8000
+      targetPort: 8000

@@ -1,0 +1,128 @@
+# Docker
+# Build a Docker image
+# https://docs.microsoft.com/azure/devops/pipelines/languages/docker
+
+trigger:
+  branches:
+    include:
+    - main
+  paths:
+    exclude:
+      - labeldata_studio/*
+      - k8s/*
+# - dev
+
+resources:
+- repo: self
+
+
+variables:
+- name: ecr-dns
+  value: 153907214727.dkr.ecr.eu-central-1.amazonaws.com
+- name: region
+  value: eu-central-1
+- name: imageRepo
+  value: data-services
+- name: buildName 
+  value: '$(Build.Repository.Name)'
+- name: kubernetesServiceConnection 
+  value: 'dev'
+- name: manifests 
+  value: $(Pipeline.Workspace)/k8sManifests/sirius-deployment.yml
+
+  # ${{ if startsWith(variables['Build.SourceBranch'], 'refs/heads/main') }}:
+  #   tag: $(Build.BuildId)_${{ variables['Build.SourceBranchName'] }}
+  #   environment: 'sirius-prod.sirius-prod'
+  #   kubernetesServiceConnection: 'odedtest'
+  #   namespace: 'sirius-prod'
+  #   dockerfileToUse: '$(Build.SourcesDirectory)/Dockerfile-gpu'
+  #   manifests: $(Pipeline.Workspace)/k8sManifests/sirius-deployment.yml
+  
+  # ${{ if startsWith(variables['Build.SourceBranch'], 'refs/heads/gpu') }}:
+  #   tag: $(Build.BuildId)_${{ variables['Build.SourceBranchName'] }}
+  #   environment: 'presight-ai-test.presight-ai-test-01'
+  #   kubernetesServiceConnection: 'dev'
+  #   namespace: 'presight-ai-test-01'
+  #   dockerfileToUse: '$(Build.SourcesDirectory)/Dockerfile-gpu'
+  #   manifests: $(Pipeline.Workspace)/k8sManifests/gpu-deployment.yml
+
+  # ${{ if startsWith(variables['Build.SourceBranch'], 'refs/heads/dev') }}:
+  #   tag: $(Build.BuildId)_${{ variables['Build.SourceBranchName'] }}
+  #   environment: 'sirius-prod.sirius-prod'
+  #   kubernetesServiceConnection: 'dev'
+  #   namespace: 'sirius-prod'    
+  #   manifests: $(Pipeline.Workspace)/k8sManifests/sirius-deployment.yml
+    
+
+
+stages:
+- stage: Build
+  displayName: Build image
+  jobs:
+  - job: Build
+    displayName: 'Building-${{ variables.tag }}'
+    pool:
+      name: Presight
+      vmImage: ubuntu-latest
+    steps:
+    - task: Docker@2
+      displayName: Build an image
+      inputs:
+        repository: '$(Build.SourceBranchName)/$(buildName)'
+        command: build
+        Dockerfile: 'Dockerfile-gpu'
+        addPipelineData: false
+        addBaseImageData: false
+        tags: | 
+           $(Build.BuildId)
+
+# Re-tag local image and push to ECR 
+    - task: Bash@3
+      displayName: 'Re-tag local image and push to ECR'
+      condition: succeededOrFailed()
+      inputs:
+        targetType: 'inline'
+        script: |
+          #docker tag repo.imisight.local:9002/$(ImageTag) $(ecr-dns)/$(IMAGE_env)/$(NPMVARS_name):$(NPMVARS_version)
+          docker images
+          docker tag $(Build.SourceBranchName)/$(buildName):$(Build.BuildId) $(ecr-dns)/$(Build.SourceBranchName)/$(buildName):$(Build.BuildId)
+
+- stage: Push
+  displayName: Push
+  jobs: 
+  - job: Push
+    displayName: Push
+    pool:
+      name: Presight
+      vmImage: ubuntu-latest
+    steps:
+
+
+    - task: ECRPushImage@1
+      displayName: Push Image
+      condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+      inputs:
+        awsCredentials: 'AWS-ILA'
+        regionName: 'eu-central-1'
+        imageSource: 'imagename'
+        sourceImageName: '$(ecr-dns)/$(Build.SourceBranchName)/$(buildName)'
+        sourceImageTag: '$(Build.BuildId)'
+        repositoryName: '$(Build.SourceBranchName)/$(buildName)'
+        pushTag: '$(Build.BuildId)'
+        autoCreateRepository: true
+    - task: PublishPipelineArtifact@1
+      inputs:
+        targetPath: '$(Pipeline.Workspace)/s/k8s'
+        artifact: 'k8sManifests'
+        publishLocation: 'pipeline'
+- stage: cleanup
+  dependsOn:
+  - Push
+  condition: succeeded('Push')
+  jobs:
+  - job: docker_image_cleanup
+    variables:
+      buildId: $(Build.BuildId)
+    steps:
+    - script: |
+        docker system prune -f --filter "label!=build-id=$buildId"

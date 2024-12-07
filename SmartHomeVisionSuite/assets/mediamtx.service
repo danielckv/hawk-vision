@@ -1,0 +1,8 @@
+[Unit]
+Description=MediaMTX
+Wants=network.target
+[Service]
+User=root
+ExecStart=/home/danielckv/localSetup/assets/mediamtx/mediamtx_armv7 /home/danielckv/localSetup/assets/mediamtx/mediamtx.yml
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Video Player</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #eaeaea;
+        }
+
+        #main-video {
+            width: 100%;
+            margin: 0 auto;
+            max-width: 1080px;
+            height: auto;
+        }
+
+        #message-over-video {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2em;
+            color: #fff;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+<!-- Or if you want the latest version from the main branch -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/hls.js@canary"></script> -->
+<video id="main-video"></video>
+<div id="message-over-video">Loading...</div>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
+<script>
+    const video = document.getElementById('main-video');
+    const message = document.getElementById('message-over-video');
+
+    function loadVideoStream() {
+        const videoSrc = 'http://localhost:8888/stream/index.m3u8';
+        if (Hls.isSupported()) {
+            console.log('HLS supported');
+            const hls = new Hls();
+            hls.loadSource(videoSrc);
+            hls.attachMedia(video);
+
+            message.innerText = 'Loading...';
+
+            hls.on(Hls.Events.MANIFEST_PARSED, function () {
+                video.play();
+                console.log('Video playing');
+                message.style.display = 'none';
+            });
+
+            console.log('HLS is starting');
+
+            hls.on(Hls.Events.ERROR, function (event, data) {
+                message.style.display = 'block';
+                message.style.color = '#bb2999';
+                if (data.fatal) {
+                    switch (data.type) {
+                        case Hls.ErrorTypes.NETWORK_ERROR:
+                            // try to recover network error
+                            console.log('fatal network error encountered, try to recover');
+                            message.innerText = 'Network error, trying to recover...';
+                            hls.startLoad();
+                            break;
+                        case Hls.ErrorTypes.MEDIA_ERROR:
+                            console.log('fatal media error encountered, try to recover');
+                            message.innerText = 'Media error, trying to recover...';
+                            hls.recoverMediaError();
+                            break;
+                        default:
+                            // cannot recover
+                            hls.destroy();
+                            console.log('cannot recover');
+                            message.innerText = 'Cannot recover, retrying in 3 seconds...';
+                            setTimeout(loadVideoStream, 3000);
+                            break;
+                    }
+                }
+            });
+        }
+    }
+
+    loadVideoStream()
+</script>
+</body>
+</html>

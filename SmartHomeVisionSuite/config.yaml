@@ -1,0 +1,14 @@
+debug: false
+videoStream:
+    url: "rtsp://127.0.0.1:8554/detections"
+    username: ""
+    password: ""
+imageSize:
+    width: 640
+    height: 480
+    fps: 30
+saveFramePeriod: 1400
+cameras:
+    - main:
+          name: "Living Room"
+          url: http://localhost:8123/motion?Living+Room

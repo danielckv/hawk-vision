@@ -1,0 +1,15 @@
+Download stage:
+Download images from the s3 bucket through the download-stage.py , needs $TRAINING_BUCKET and $TRAININGIMAGES_LOCATION
+kubectl -n presight-ai-test-01 exec -it $(kubectl -n presight-ai-test-01 get pods -l app=video-yolov8 -o name) -- /bin/bash -c "python download-stage.py"
+
+PreProcess stage:
+Runs image changes before training on downloaded images - needs more argument input from data-scientist 
+kubectl -n presight-ai-test-01 exec -it $(kubectl -n presight-ai-test-01 get pods -l app=video-yolov8 -o name) -- /bin/bash -c "yolo \
+--task='$TASK' \
+--mode='$MODE' \
+--args='$ARGS' \
+--training-images-location='$TRAININGIMAGES_LOCATION' \
+--training-bucket='$TRAINING_BUCKET' \
+--batch-size='$BATCH_SIZE'"
+
+Train stage:

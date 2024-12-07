@@ -1,0 +1,12 @@
+[Unit]
+Description=Local mediamtx server
+
+[Service]
+User=rius
+WorkingDirectory=/home/rius/LocalSetup
+ExecStart=/usr/bin/bash -c "/home/rius/LocalSetup/media/mediamtx/run-server.sh"
+Restart=on-failure
+RestartSec=20
+
+[Install]
+WantedBy=multi-user.target

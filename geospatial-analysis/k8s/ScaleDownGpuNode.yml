@@ -1,0 +1,40 @@
+trigger:
+  # branches:
+  #   include:
+  #   - main
+  paths:
+    exclude:
+      - labeldata_studio/*
+      - ../*
+
+variables:
+- name: kubernetesServiceConnection 
+  value: 'dev'
+
+stages:
+- stage: ScaleDownCluster
+  jobs:
+  - job: Scale_Down_Cluster
+    steps:
+      - task: AWSShellScript@1
+        displayName: AWS-ScaleDown
+        inputs:
+          awsCredentials: 'AWS-Presight'
+          regionName: 'eu-west-1'
+          scriptType: 'inline'
+          inlineScript: 'aws autoscaling update-auto-scaling-group --region eu-west-1 --auto-scaling-group-name eks-gpuNodeGroup-01-fec25476-65a4-55b1-0f39-a3d58239e126 --desired-capacity 0'
+      # - task: Bash@3
+        # displayName: 'Scale down dev cluster'
+        # inputs:
+          # targetType: 'inline'
+          # script: | 
+            # aws autoscaling update-auto-scaling-group --region eu-west-1 --auto-scaling-group-name eks-gpuNodeGroup-01-fec25476-65a4-55b1-0f39-a3d58239e126 --desired-capacity 0
+
+
+- stage: Cleanup
+  displayName: Cleanup
+  jobs:
+  - job: Clean
+    workspace:
+      clean: all
+  

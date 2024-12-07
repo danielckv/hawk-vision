@@ -1,0 +1,12 @@
+[Unit]
+Description=RIUS RPC Server worker
+
+[Service]
+User=rius
+WorkingDirectory=/home/rius/LocalSetup
+ExecStart=/usr/bin/python3.11 /home/rius/LocalSetup/localServer/run.py --worker-type=rpc
+Restart=on-failure
+RestartSec=20
+
+[Install]
+WantedBy=multi-user.target
