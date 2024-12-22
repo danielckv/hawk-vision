@@ -21,12 +21,6 @@ def signal_handler(sig, last_frame=None):
     app_state['running'] = False
     print(f"Signal {sig} received. Exiting...")
 
-
-def send_notification():
-    requests.get("http://localhost:8123/motion?Living%20Room")
-    print("Notification sent!")
-
-
 def record_motion(last_record_time, output_stream, original_frame):
     current_time = time.time()
     if last_record_time is not None and (current_time - last_record_time) < 60:
@@ -36,7 +30,6 @@ def record_motion(last_record_time, output_stream, original_frame):
         return False
 
     return True
-
 
 def start_output_stream():
     return RTSPFrameStreamer("rtsp://localhost:8554/detections")
@@ -81,7 +74,6 @@ def main():
             if not recording:
                 out_stream = start_output_stream()
                 recording = True
-                send_notification()  # Send alert only at the start
                 person_detected_time = time.time()  # Mark the time of detection
 
             # Apply CLAHE (only if recording)
