@@ -1,0 +1,131 @@
+# Start with the base Python image
+FROM python:3.10-slim-buster as build
+
+# Set up the working directory
+WORKDIR /app
+ENV TZ=Asia/Jerusalem
+ENV DEBIAN_FRONTEND=noninteractive 
+
+
+# Install build dependencies
+RUN apt-get update -y && apt-get install -y \
+    build-essential \
+    pkg-config \
+    libsm6 \
+    libxext6 \
+    libx264-dev \
+    python3-tk \
+    curl \
+    unzip \
+    zlib1g-dev \
+    wget \
+    software-properties-common \
+    && rm -rf /var/lib/apt/lists/*
+
+
+# Install AWS CLI & cuda-keyring
+RUN curl "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.0-1_all.deb" -o "cuda-keyring_1.0-1_all.deb"
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
+    && unzip awscliv2.zip \
+    && sh ./aws/install \
+    && rm -rf aws awscliv2.zip
+
+# Install Python dependencies
+COPY requirements.txt requirements.txt
+RUN python -m pip install --upgrade pip \
+    && python -m pip install -r requirements.txt
+
+# Copy application code
+COPY geospatialib/algorithms ./algorithms/
+COPY geospatialib/webapp ./webapp/
+COPY geospatialib/shared ./shared/
+COPY geospatialib/cli ./cli/
+COPY models/ ./models/
+
+COPY geospatialib/queueService ./video-analysis/
+
+RUN cd ./webapp/ && python -m pip install -r requirements.txt
+RUN cd ../
+
+# Use multi-stage build to reduce the image size
+FROM nvidia/cuda:11.4.3-devel-ubuntu20.04 as runtime
+
+WORKDIR /app
+ENV TZ=Asia/Jerusalem
+ENV DEBIAN_FRONTEND=noninteractive
+
+COPY --from=build /usr/local /usr/local
+COPY --from=build /app /app
+RUN apt-get update -y && apt-get install software-properties-common wget -y
+RUN apt-key del 7fa2af80 && \
+    wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.0-1_all.deb && \
+    dpkg -i cuda-keyring_1.0-1_all.deb && \
+    apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/3bf863cc.pub && \
+    apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu2004/x86_64/7fa2af80.pub && \
+    sed -i '/developer\.download\.nvidia\.com\/compute\/cuda\/repos/d' /etc/apt/sources.list.d/* && \
+    sed -i '/developer\.download\.nvidia\.com\/compute\/machine-learning\/repos/d' /etc/apt/sources.list.d/*
+
+RUN wget http://mirrors.kernel.org/ubuntu/pool/main/libf/libffi/libffi6_3.2.1-8_amd64.deb
+RUN dpkg -i libffi6_3.2.1-8_amd64.deb  \
+    && rm libffi6_3.2.1-8_amd64.deb
+
+RUN add-apt-repository ppa:ubuntugis/ppa
+RUN apt-get update -y  \
+    && apt-get upgrade -y  \
+    && apt-get install -y \
+    git \
+    libsm6 \
+    libxext6 \
+    libx264-dev \
+    libgl1 \
+    zlib1g-dev \
+    gdal-bin \
+    swig \
+    libpng-dev  \
+    libjpeg-dev \
+    vim \
+    libncurses5-dev \
+    libgdbm-dev \
+    libnss3-dev \
+    libssl-dev \
+    libreadline-dev \
+    libffi-dev \
+    libsqlite3-dev \
+    libbz2-dev \
+    libgdal-dev \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN wget https://www.python.org/ftp/python/3.10.5/Python-3.10.5.tar.xz \
+    && tar -xf Python-3.10.5.tar.xz \
+    && cd Python-3.10.5 \
+    && ./configure --enable-optimizations \
+    && make altinstall \
+    && cd ../ \
+    && rm -rf Python-3.10.5
+
+ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda/lib64
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=all
+ENV NVIDIA_REQUIRE_CUDA="cuda>=9.0"
+ENV CUDA_HOME=/usr/local/cuda
+
+RUN python3.10 -m pip install torch==1.12.1+cu113 torchvision==0.13.1+cu113 -f https://download.pytorch.org/whl/torch_stable.html
+RUN CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:/usr/include/gdal C_INCLUDE_PATH=$C_INCLUDE_PATH:/usr/include/gdal python3.10 -m pip install nvidia-tensorrt gdal==$(gdal-config --version)
+
+WORKDIR /app/algorithms
+RUN ./setup.sh
+
+WORKDIR /app
+RUN export CUDA_HOME=/usr/local/cuda \
+    && git clone https://github.com/IDEA-Research/GroundingDINO.git \
+    && cd GroundingDINO  \
+    && python3.10 -m pip install -e . --no-build-isolation  \
+    && mkdir weights \
+    && cd weights \
+    && wget -q https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha2/groundingdino_swinb_cogcoor.pth \
+    && cd ../../
+
+
+ENTRYPOINT ["/bin/bash"]
+# CMD [ "python", "-u", "video-analysis/inference_video.py"]

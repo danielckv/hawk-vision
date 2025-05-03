@@ -13,6 +13,8 @@ runs
 *.pth
 *.pt
 *.zip
+.venv
+_data
 output.geojson
 output.tif
 annotations.tif
