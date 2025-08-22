@@ -83,30 +83,11 @@ def start_training(dataset_dir):
     model_name_ver = time.strftime("%Y.%m-%d.%H%M%S")
     model_name_ver = "v" + model_name_ver
 
-    # Initialize Neptune run
-    run = neptune.init_run(
-        custom_run_id=model_name_ver,
-        project="mobilegroup-research/RIUS-SIRIUS",
-        api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiIzZjU5OGQ3Zi05OWM1LTQyYWYtODcwMy04MGZjNTc2YjM2MTcifQ==",
-    )
-
-    model_version = neptune.init_model_version(
-        model="RIUS-ARLVHCL",
-        project="mobilegroup-research/RIUS-SIRIUS",
-        api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiIzZjU5OGQ3Zi05OWM1LTQyYWYtODcwMy04MGZjNTc2YjM2MTcifQ==",
-        # your credentials
-    )
-
-    run["train/images"].track_files(f"{CURRENT_DATASET_DIR}/images")
 
     model = YOLO("../models/yolov8m.pt")
 
     # Train the model and log metrics to Neptune
     model.train(data=f"{CURRENT_DATASET_DIR}/config.yaml", project=f"{CURRENT_DATASET_DIR}", name=model_name_ver)
-
-    run["data_sample"].upload(f"{CURRENT_DATASET_DIR}/{model_name_ver}/results.csv")
-    model_version["model"].upload(f"{CURRENT_DATASET_DIR}/{model_name_ver}/weights/best.pt")
-    model_version.change_stage("production")
 
     results_assets = [
         f"{CURRENT_DATASET_DIR}/{model_name_ver}/labels.jpeg",
@@ -114,45 +95,13 @@ def start_training(dataset_dir):
         f"{CURRENT_DATASET_DIR}/{model_name_ver}/results.png",
     ]
 
-    run["train/f1"].upload(f"{CURRENT_DATASET_DIR}/{model_name_ver}/F1_curve.png")
 
-    run["val/conf_matrix"].upload(f"{CURRENT_DATASET_DIR}/{model_name_ver}/confusion_matrix.png")
-
-    # You can also upload plot objects directly
-    run["val/roc_curve"].upload(f"{CURRENT_DATASET_DIR}/{model_name_ver}/R_curve.png")
-    run["val/p_curve"].upload(f"{CURRENT_DATASET_DIR}/{model_name_ver}/P_curve.png")
 
     data = pd.read_csv(f"{CURRENT_DATASET_DIR}/{model_name_ver}/results.csv", sep=",", skipinitialspace=True)
     for index, row in data.iterrows():
         epoch = index
 
-        # Training metrics
-        run["train/box_loss"].log(row["train/box_loss"], step=epoch)
-        run["train/cls_loss"].log(row["train/cls_loss"], step=epoch)
-        run["train/dfl_loss"].log(row["train/dfl_loss"], step=epoch)
-
-        # Validation metrics
-        run["val/box_loss"].log(row["val/box_loss"], step=epoch)
-        run["val/cls_loss"].log(row["val/cls_loss"], step=epoch)
-        run["val/dfl_loss"].log(row["val/dfl_loss"], step=epoch)
-
-        # Learning rate metrics (log for each parameter group)
-        run["lr/pg0"].log(row["lr/pg0"], step=epoch)
-        run["lr/pg1"].log(row["lr/pg1"], step=epoch)
-        run["lr/pg2"].log(row["lr/pg2"], step=epoch)
-
-        # Evaluation metrics
-        run["metrics/precision(B)"].log(row["metrics/precision(B)"], step=epoch)
-        run["metrics/recall(B)"].log(row["metrics/recall(B)"], step=epoch)
-        run["metrics/mAP50(B)"].log(row["metrics/mAP50(B)"], step=epoch)
-        run["metrics/mAP50-95(B)"].log(row["metrics/mAP50-95(B)"], step=epoch)
-
         results_assets.append(f"{CURRENT_DATASET_DIR}/{model_name_ver}/train_batch{epoch}.jpg")
-
-    run["results"].upload_files(results_assets)
-
-    model_version.stop()
-    run.stop()
 
     return {
         "status": "success",
