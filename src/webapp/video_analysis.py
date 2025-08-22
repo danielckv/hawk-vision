@@ -8,7 +8,7 @@ import gradio as gr
 
 ABS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
 sys.path.append(ABS_PATH)
-from algorithms.supervision.tracker import SuperVideoTracker
+from geospatialib.algorithms.supervision.tracker import SuperVideoTracker
 
 model_instance = None
 gradio_inputs = None

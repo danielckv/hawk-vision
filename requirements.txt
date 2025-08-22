@@ -1,23 +1,21 @@
-aiormq==6.7.7
-numpy>=1.26.2
-loguru>=0.7.0
-opencv-python>=4.9.0.80
-PyYAML>=5.3.1           # read tracker configs
-pandas==2.1.4           # export matrix
-gdown>=4.7.1            # google drive model download
-GitPython>=3.1.0        # track eval cloning
-lapx>=0.5.2
-boto3>=1.17.0           # aws s3 model download
-redis>=3.5.3      
-rq==1.15.1
-filterpy>=1.4.5         # OCSORT & DeepOCSORT
-ultralytics==8.1.14
-jsonschema==4.20.0
+loguru
+opencv-python
+PyYAML
+pandas
+gdown
+GitPython
+lapx
+boto3
+redis
+rq
+filterpy
+ultralytics
+jsonschema
 structlog
 Shapely
 flask
 metaseg
-supervision==0.20.0
+supervision
 leafmap
 fastapi
 uvicorn
@@ -28,7 +26,6 @@ flask_restful
 neptune
 aiohttp
 aiortc
-rtsp==1.1.12
-click==8.1.7
-onnxruntime==1.16.2
+rtsp
+click
 mesop

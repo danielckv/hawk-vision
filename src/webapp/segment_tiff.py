@@ -11,9 +11,8 @@ from PIL import Image
 sys.path.append(
     os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
 
-import shared
-from algorithms.io.geotiff import GeoTiffHandler
-from algorithms.visioniq.sam import SegmentAnything
+from geospatialib.algorithms.io.geotiff import GeoTiffHandler
+from geospatialib.algorithms.visioniq.sam import SegmentAnything
 
 print = shared.log_instance().info
 ssl._create_default_https_context = ssl._create_unverified_context
