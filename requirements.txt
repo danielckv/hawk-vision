@@ -1,3 +1,5 @@
+torch
+torchvision
 loguru
 opencv-python
 PyYAML
@@ -27,5 +29,6 @@ neptune
 aiohttp
 aiortc
 rtsp
+sklearn
 click
 mesop
